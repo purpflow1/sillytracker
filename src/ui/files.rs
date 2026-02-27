@@ -12,8 +12,9 @@ pub fn get_dirs(current_dir: PathBuf, show_dirs: bool) -> Vec<String> {
         .unwrap()
         .filter_map(|dir| {
             let dir = dir.unwrap();
-            if show_dirs || !dir.path().is_dir() {
-                Some(dir.file_name().into_string().unwrap())
+            let filename = dir.file_name().into_string().unwrap();
+            if (show_dirs || !dir.path().is_dir()) && filename.chars().next().unwrap() != '.' {
+                Some(filename)
             } else {
                 None
             }
@@ -31,7 +32,7 @@ pub fn app(terminal: &mut DefaultTerminal) -> std::io::Result<Option<PathBuf>> {
         .block(Block::bordered().title("Files"))
         .style(Style::new().white())
         .highlight_style(Style::new().bold())
-        .highlight_symbol(">> ")
+        .highlight_symbol("▶ ")
         .direction(ListDirection::TopToBottom);
 
     let mut state = ListState::default();
