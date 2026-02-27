@@ -7,17 +7,24 @@ use ratatui::{
     widgets::{Block, List, ListDirection, ListState},
 };
 
-pub fn get_dirs(current_dir: PathBuf) -> Vec<String> {
+pub fn get_dirs(current_dir: PathBuf, show_dirs: bool) -> Vec<String> {
     let dirs: Vec<_> = fs::read_dir(current_dir)
         .unwrap()
-        .map(|dir| dir.unwrap().file_name().into_string().unwrap())
+        .filter_map(|dir| {
+            let dir = dir.unwrap();
+            if show_dirs || !dir.path().is_dir() {
+                Some(dir.file_name().into_string().unwrap())
+            } else {
+                None
+            }
+        })
         .collect();
     dirs
 }
 
 pub fn app(terminal: &mut DefaultTerminal) -> std::io::Result<Option<PathBuf>> {
     let mut current_dir = env::current_dir().unwrap();
-    let mut dirs = get_dirs(current_dir.clone());
+    let mut dirs = get_dirs(current_dir.clone(), true);
 
     let mut list = List::new(dirs.clone())
         .block(Block::bordered().title("Files"))
@@ -42,7 +49,7 @@ pub fn app(terminal: &mut DefaultTerminal) -> std::io::Result<Option<PathBuf>> {
                     current_dir.pop();
 
                     if current_dir.is_dir() {
-                        dirs = get_dirs(current_dir.clone());
+                        dirs = get_dirs(current_dir.clone(), true);
                         list = list.items(dirs.clone());
                     } else {
                         break Ok(Some(current_dir));
@@ -53,7 +60,7 @@ pub fn app(terminal: &mut DefaultTerminal) -> std::io::Result<Option<PathBuf>> {
                         current_dir.push(dirs[i].clone());
 
                         if current_dir.is_dir() {
-                            dirs = get_dirs(current_dir.clone());
+                            dirs = get_dirs(current_dir.clone(), true);
                             list = list.items(dirs.clone());
                         } else {
                             break Ok(Some(current_dir));

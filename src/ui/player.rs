@@ -28,7 +28,7 @@ pub fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
         .to_string();
     let mut current_dir = current_file.clone();
     current_dir.pop();
-    let playlist = get_dirs(current_dir.clone());
+    let playlist = get_dirs(current_dir.clone(), false);
 
     let mut selected = 0;
 
