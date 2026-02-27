@@ -1,10 +1,14 @@
 use std::time::Duration;
 
+use global_hotkey::{
+    GlobalHotKeyEvent, GlobalHotKeyManager,
+    hotkey::{Code, HotKey},
+};
 use ratatui::{
     DefaultTerminal,
     crossterm::{
         self,
-        event::{self, KeyCode},
+        event::{self, KeyCode, MediaKeyCode},
     },
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
@@ -39,6 +43,15 @@ pub fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
             break;
         }
     }
+
+    let manager = GlobalHotKeyManager::new().unwrap();
+    let play_pause = HotKey::new(None, Code::MediaPlayPause);
+    let next = HotKey::new(None, Code::MediaTrackNext);
+    let prev = HotKey::new(None, Code::MediaTrackPrevious);
+    manager.register(play_pause).unwrap();
+    manager.register(next).unwrap();
+    manager.register(prev).unwrap();
+    let event_receiver = GlobalHotKeyEvent::receiver();
 
     let mut sound = Player::new().unwrap();
     let mut error = false;
@@ -212,6 +225,41 @@ pub fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
             }
         }
 
+        if let Ok(event) = event_receiver.try_recv() {
+            if event.id() == play_pause.id() {
+                match sound.status {
+                    PlayingStatus::Played => sound.pause(),
+                    _ => sound.resume(),
+                }
+            } else if event.id() == next.id() {
+                selected += 1;
+                if playlist.len() == selected {
+                    selected = 0;
+                }
+                current_file = current_dir.join(playlist[selected].clone());
+                if let Err(e) = sound.play(current_file.as_path()) {
+                    error = true;
+                    sound.title = format!("Error: {}", e);
+                } else {
+                    error = false;
+                }
+            } else if event.id() == prev.id() {
+                if selected == 0 {
+                    selected = playlist.len() - 1;
+                } else {
+                    selected -= 1;
+                }
+
+                current_file = current_dir.join(playlist[selected].clone());
+                if let Err(e) = sound.play(current_file.as_path()) {
+                    error = true;
+                    sound.title = format!("Not supported format: {}", e);
+                } else {
+                    error = false;
+                }
+            }
+        }
+
         if event::poll(Duration::from_millis(16))?
             && let Some(event) = crossterm::event::read()?.as_key_press_event()
         {
@@ -219,11 +267,13 @@ pub fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                 KeyCode::Esc | KeyCode::Char('q') => break Ok(()),
                 KeyCode::Up => sound.set_volume(sound.volume + 0.1),
                 KeyCode::Down => sound.set_volume(sound.volume - 0.1),
-                KeyCode::Char(' ') => match sound.status {
-                    PlayingStatus::Played => sound.pause(),
-                    _ => sound.resume(),
-                },
-                KeyCode::Char('j') => {
+                KeyCode::Char(' ') | KeyCode::Media(MediaKeyCode::PlayPause) => {
+                    match sound.status {
+                        PlayingStatus::Played => sound.pause(),
+                        _ => sound.resume(),
+                    }
+                }
+                KeyCode::Char('j') | KeyCode::Media(MediaKeyCode::TrackNext) => {
                     selected += 1;
                     if playlist.len() == selected {
                         selected = 0;
@@ -236,7 +286,7 @@ pub fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                         error = false;
                     }
                 }
-                KeyCode::Char('k') => {
+                KeyCode::Char('k') | KeyCode::Media(MediaKeyCode::TrackPrevious) => {
                     if selected == 0 {
                         selected = playlist.len() - 1;
                     } else {

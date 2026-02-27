@@ -8,7 +8,7 @@ use ratatui::{
 };
 
 pub fn get_dirs(current_dir: PathBuf, show_dirs: bool) -> Vec<String> {
-    let dirs: Vec<_> = fs::read_dir(current_dir)
+    let mut dirs: Vec<_> = fs::read_dir(current_dir)
         .unwrap()
         .filter_map(|dir| {
             let dir = dir.unwrap();
@@ -19,6 +19,7 @@ pub fn get_dirs(current_dir: PathBuf, show_dirs: bool) -> Vec<String> {
             }
         })
         .collect();
+    dirs.sort();
     dirs
 }
 
