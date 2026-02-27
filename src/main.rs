@@ -257,7 +257,7 @@ fn app(mut current_file: PathBuf) -> Result<(), Box<dyn Error>> {
                 }
             }
 
-            if event::poll(Duration::from_millis(16))?
+            if event::poll(Duration::from_millis(500))?
                 && let Some(event) = crossterm::event::read()?.as_key_press_event()
             {
                 match event.code {
