@@ -123,6 +123,8 @@ impl Player {
         {
             let (source, duration) = Self::get_mod(path);
             self.title = path.file_name().unwrap().to_str().unwrap().to_string();
+            self.artist = String::new();
+            self.album = String::new();
             self.duration = Duration::from_secs_f64(duration);
             self.player.append(source);
         } else {
