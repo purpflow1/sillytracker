@@ -1,4 +1,4 @@
-use std::{env, fs, path::PathBuf};
+use std::{env, path::PathBuf};
 
 use ratatui::{
     DefaultTerminal,
@@ -7,25 +7,11 @@ use ratatui::{
     widgets::{Block, List, ListDirection, ListState},
 };
 
-pub fn get_dirs(current_dir: PathBuf, show_dirs: bool) -> Vec<String> {
-    let mut dirs: Vec<_> = fs::read_dir(current_dir)
-        .unwrap()
-        .filter_map(|dir| {
-            let dir = dir.unwrap();
-            let filename = dir.file_name().into_string().unwrap();
-            if (show_dirs || !dir.path().is_dir()) && filename.chars().next().unwrap() != '.' {
-                Some(filename)
-            } else {
-                None
-            }
-        })
-        .collect();
-    dirs.sort();
-    dirs
-}
+use crate::fs::get_dirs;
 
 pub fn app(terminal: &mut DefaultTerminal) -> std::io::Result<Option<PathBuf>> {
     let mut current_dir = env::current_dir().unwrap();
+
     let mut dirs = get_dirs(current_dir.clone(), true);
 
     let mut list = List::new(dirs.clone())
@@ -49,6 +35,7 @@ pub fn app(terminal: &mut DefaultTerminal) -> std::io::Result<Option<PathBuf>> {
                 KeyCode::Esc | KeyCode::Char('q') => break Ok(None),
                 KeyCode::Backspace => {
                     current_dir.pop();
+                    env::set_current_dir(current_dir.clone()).unwrap();
 
                     if current_dir.is_dir() {
                         dirs = get_dirs(current_dir.clone(), true);
@@ -59,6 +46,7 @@ pub fn app(terminal: &mut DefaultTerminal) -> std::io::Result<Option<PathBuf>> {
                 }
                 KeyCode::Enter => {
                     if let Some(i) = state.selected() {
+                        env::set_current_dir(current_dir.clone()).unwrap();
                         current_dir.push(dirs[i].clone());
 
                         if current_dir.is_dir() {
