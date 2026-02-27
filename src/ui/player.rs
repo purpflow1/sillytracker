@@ -70,14 +70,8 @@ pub fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
 
             let main_chunks = Layout::default()
                 .direction(Direction::Horizontal)
-                .constraints([Constraint::Percentage(40), Constraint::Percentage(60)].as_ref())
+                .constraints([Constraint::Percentage(70), Constraint::Percentage(30)].as_ref())
                 .split(chunks[0]);
-
-            // Right: now playing & details
-            let right_chunks = Layout::default()
-                .direction(Direction::Vertical)
-                .constraints([Constraint::Length(5), Constraint::Min(3)].as_ref())
-                .split(main_chunks[1]);
 
             let items: Vec<ListItem> = playlist
                 .iter()
@@ -117,13 +111,7 @@ pub fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
             .block(Block::default().borders(Borders::ALL).title("Now Playing"))
             .style(Style::default().fg(Color::White));
 
-            f.render_widget(now_playing, right_chunks[0]);
-
-            let visual = Block::default()
-                .borders(Borders::ALL)
-                .title("Visualizer")
-                .style(Style::default().fg(Color::Magenta));
-            f.render_widget(visual, right_chunks[1]);
+            f.render_widget(now_playing, main_chunks[1]);
 
             let controls = Layout::default()
                 .direction(Direction::Horizontal)
@@ -218,7 +206,6 @@ pub fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
             current_file = current_dir.join(playlist[selected].clone());
             if let Err(e) = sound.play(current_file.as_path()) {
                 error = true;
-                dbg!(current_file);
                 sound.title = format!("Error: {}", e);
             } else {
                 error = false;
