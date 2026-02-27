@@ -219,12 +219,7 @@ fn app(mut current_file: PathBuf) -> Result<(), Box<dyn Error>> {
                     selected = 0;
                 }
                 current_file = current_dir.join(playlist[selected].clone());
-                if let Err(e) = sound.play(current_file.as_path()) {
-                    error = true;
-                    sound.title = format!("Error: {}", e);
-                } else {
-                    error = false;
-                }
+                let _ = sound.play(current_file.as_path());
             }
 
             if let Ok(event) = event_receiver.try_recv() {
@@ -294,7 +289,6 @@ fn app(mut current_file: PathBuf) -> Result<(), Box<dyn Error>> {
                         } else {
                             selected -= 1;
                         }
-
                         current_file = current_dir.join(playlist[selected].clone());
                         if let Err(e) = sound.play(current_file.as_path()) {
                             error = true;

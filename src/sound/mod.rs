@@ -172,17 +172,19 @@ impl Player {
     }
 
     pub fn move_position(&mut self, position: f64) -> Result<(), Box<dyn Error>> {
+        let dur = self.duration.as_secs_f64();
         let cur = self.get_position().as_secs_f64();
         let new = cur + position;
-        if new < cur {
+        if position < 0. {
             let p = self.current_path.clone();
             let path = Path::new(p.as_str());
             self.play(path)?;
         }
-        if 0. > new {
-            self.player.try_seek(Duration::from_millis(1000))?;
-        } else if new >= self.duration.as_secs_f64() {
-            self.player.try_seek(self.duration)?;
+        if new < 0. && dur > 0.1 {
+            self.move_position(0.1)?;
+        } else if new >= dur && dur > 0.1 {
+            self.player
+                .try_seek(Duration::try_from_secs_f64(dur).unwrap())?;
         } else {
             self.player
                 .try_seek(Duration::try_from_secs_f64(new).unwrap())?;
