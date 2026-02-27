@@ -10,6 +10,7 @@ use rodio::{
     cpal::{DeviceId, Host, traits::HostTrait},
 };
 
+#[derive(Clone, Copy)]
 pub enum PlayingStatus {
     Stopped,
     Paused,
@@ -73,7 +74,13 @@ impl Player {
             self.player = rodio::Player::connect_new(self.sink.mixer());
 
             let current = self.current_path.clone();
+            let status = self.status;
+
             self.play(Path::new(current.as_str()))?;
+            match status {
+                PlayingStatus::Paused | PlayingStatus::Stopped => self.pause(),
+                _ => (),
+            }
             self.move_position(position.as_secs_f64())?;
         }
 
