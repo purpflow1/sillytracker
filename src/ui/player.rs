@@ -260,5 +260,7 @@ pub fn app(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                 _ => (),
             }
         }
+
+        sound.check_device().unwrap();
     }
 }

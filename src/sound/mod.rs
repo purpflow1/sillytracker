@@ -4,7 +4,11 @@ use lofty::{
     file::{AudioFile, TaggedFileExt},
     tag::Accessor,
 };
-use rodio::{Decoder, buffer::SamplesBuffer};
+use rodio::{
+    Decoder, DeviceTrait,
+    buffer::SamplesBuffer,
+    cpal::{DeviceId, Host, traits::HostTrait},
+};
 
 pub enum PlayingStatus {
     Stopped,
@@ -21,14 +25,21 @@ pub struct Player {
     pub status: PlayingStatus,
     pub volume: f32,
 
-    _sink: rodio::MixerDeviceSink,
+    host: Host,
+    device_id: DeviceId,
+    sink: rodio::MixerDeviceSink,
     player: rodio::Player,
     current_path: String,
 }
 
 impl Player {
     pub fn new() -> Result<Self, Box<dyn Error>> {
-        let sink = rodio::DeviceSinkBuilder::open_default_sink()?;
+        let host = rodio::cpal::default_host();
+        let default_device = host.default_output_device().unwrap();
+        let device_id = default_device.id()?;
+
+        let mut sink = rodio::DeviceSinkBuilder::from_device(default_device)?.open_stream()?;
+        sink.log_on_drop(false);
         let player = rodio::Player::connect_new(sink.mixer());
 
         Ok(Self {
@@ -38,10 +49,35 @@ impl Player {
             duration: Duration::ZERO,
             status: PlayingStatus::Stopped,
             volume: 0.5,
-            _sink: sink,
+            host,
+            device_id,
+            sink,
             player,
             current_path: String::new(),
         })
+    }
+
+    pub fn check_device(&mut self) -> Result<(), Box<dyn Error>> {
+        let default_device = self.host.default_output_device().unwrap();
+        let Ok(device_id) = default_device.id() else {
+            return Ok(());
+        };
+
+        if self.device_id != device_id {
+            self.device_id = device_id;
+
+            let position = self.get_position();
+
+            self.sink = rodio::DeviceSinkBuilder::from_device(default_device)?.open_stream()?;
+            self.sink.log_on_drop(false);
+            self.player = rodio::Player::connect_new(self.sink.mixer());
+
+            let current = self.current_path.clone();
+            self.play(Path::new(current.as_str()))?;
+            self.move_position(position.as_secs_f64())?;
+        }
+
+        Ok(())
     }
 
     fn get_mod(path: &Path) -> (SamplesBuffer, f64) {
@@ -70,7 +106,7 @@ impl Player {
         (source, duration)
     }
 
-    fn play_in(&mut self, path: &Path) -> Result<(), Box<dyn Error>> {
+    pub fn play(&mut self, path: &Path) -> Result<(), Box<dyn Error>> {
         self.player.stop();
 
         self.current_path = path.to_str().unwrap().to_string();
@@ -110,12 +146,6 @@ impl Player {
             self.player.append(source);
         }
 
-        Ok(())
-    }
-
-    pub fn play(&mut self, path: &Path) -> Result<(), Box<dyn Error>> {
-        self.play_in(path)?;
-
         self.player.set_volume(self.volume);
         self.player.play();
 
@@ -140,7 +170,7 @@ impl Player {
         if new < cur {
             let p = self.current_path.clone();
             let path = Path::new(p.as_str());
-            self.play_in(path)?;
+            self.play(path)?;
         }
         if 0. > new {
             self.player.try_seek(Duration::from_millis(1000))?;
