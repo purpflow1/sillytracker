@@ -70,9 +70,9 @@ impl App {
         let play_pause = HotKey::new(None, Code::MediaPlayPause);
         let next = HotKey::new(None, Code::MediaTrackNext);
         let prev = HotKey::new(None, Code::MediaTrackPrevious);
-        hotkey_manager.register(play_pause)?;
-        hotkey_manager.register(next)?;
-        hotkey_manager.register(prev)?;
+        hotkey_manager.register(play_pause).ok();
+        hotkey_manager.register(next).ok();
+        hotkey_manager.register(prev).ok();
         let event_receiver = GlobalHotKeyEvent::receiver();
 
         // Initialize player
